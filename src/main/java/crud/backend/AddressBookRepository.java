@@ -16,4 +16,7 @@ public interface AddressBookRepository extends JpaRepository<AddressBook, Long> 
     
     List<AddressBook> findByFirstNameLikeIgnoreCaseOrLastNameLikeIgnoreCase(String firstName, String lastName);
 
+    List<AddressBook> findByFirstNameLikeIgnoreCaseOrLastNameLikeIgnoreCase(String firstName, String lastName, Pageable pageable);
+
+    long countByFirstNameLikeIgnoreCaseOrLastNameLikeIgnoreCase(String firstName, String lastName);
 }

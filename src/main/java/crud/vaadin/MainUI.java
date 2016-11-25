@@ -11,6 +11,8 @@ import com.vaadin.ui.TextField;
 import com.vaadin.ui.UI;
 import crud.backend.AddressBook;
 import crud.backend.AddressBookRepository;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.vaadin.spring.events.EventBus;
 import org.vaadin.spring.events.EventScope;
 import org.vaadin.spring.events.annotation.EventBusListenerMethod;
@@ -63,8 +65,16 @@ public class MainUI extends UI {
                 ).expand(addressBookTable)
         );
         listEntities();
-        
+
         addressBookTable.addMValueChangeListener(e -> adjustActionButtonState());
+
+        // Double-clicking the row should show the edit form
+        addressBookTable.addItemClickListener(e -> {
+            if (e.isDoubleClick() && e.getItem() != null) {
+                edit((AddressBook) e.getItemId());
+            }
+        });
+
         filterByNameText.addTextChangeListener(e -> {
             listEntities(e.getText());
         });
@@ -87,32 +97,33 @@ public class MainUI extends UI {
     
     private void listEntities(String nameFilter) {
         // A dead simple in memory listing would be:
-        // list.setRows(repo.findAll());
+        // addressBookTable.setRows(repo.findAll());
         
         // But we want to support filtering, first add the % marks for SQL name query
         String likeFilter = "%" + nameFilter + "%";
-        addressBookTable.setRows(repo.findByFirstNameLikeIgnoreCaseOrLastNameLikeIgnoreCase(likeFilter, likeFilter));
+        //addressBookTable.setRows(repo.findByFirstNameLikeIgnoreCaseOrLastNameLikeIgnoreCase(likeFilter, likeFilter));
 
         // Lazy binding for better optimized connection from the Vaadin Table to
         // Spring Repository. This approach uses less memory and database
         // resources. Use this approach if you expect you'll have lots of data 
         // in your table. There are simpler APIs if you don't need sorting.
-        // list.lazyLoadFrom(
-        //         // entity fetching strategy
-        //         (firstRow, asc, sortProperty) -> repo.findByNameLikeIgnoreCase(
-        //                 likeFilter,
-        //                 new PageRequest(
-        //                         firstRow / PAGESIZE,
-        //                         PAGESIZE,
-        //                         asc ? Sort.Direction.ASC : Sort.Direction.DESC,
-        //                         // fall back to id as "natural order"
-        //                         sortProperty == null ? "id" : sortProperty
-        //                 )
-        //         ),
-        //         // count fetching strategy
-        //         () -> (int) repo.countByNameLike(likeFilter),
-        //         PAGESIZE
-        // );
+        addressBookTable.lazyLoadFrom(
+                // entity fetching strategy
+                (firstRow, asc, sortProperty) -> repo.findByFirstNameLikeIgnoreCaseOrLastNameLikeIgnoreCase(
+                        likeFilter,
+                        likeFilter,
+                        new PageRequest(
+                                firstRow / PAGESIZE,
+                                PAGESIZE,
+                                asc ? Sort.Direction.ASC : Sort.Direction.DESC,
+                                // fall back to id as "natural order"
+                                sortProperty == null ? "id" : sortProperty
+                        )
+                ),
+                // count fetching strategy
+                () -> (int) repo.countByFirstNameLikeIgnoreCaseOrLastNameLikeIgnoreCase(likeFilter, likeFilter),
+                PAGESIZE
+        );
         adjustActionButtonState();
         
     }
